@@ -15,5 +15,6 @@ Then the discrete, implementable features:
 | [`prd/features/03-hex-map-grid-placement.md`](./prd/features/03-hex-map-grid-placement.md) | Hex-grid map: drag-to-place, move, delete, incomplete markers, rendering approach |
 | [`prd/features/04-hex-edit-form.md`](./prd/features/04-hex-edit-form.md) | Per-hex fill-out form driven by the live template |
 | [`prd/features/05-save-load-persistence.md`](./prd/features/05-save-load-persistence.md) | Single-file save/load format |
+| [`prd/features/06-neighbor-context.md`](./prd/features/06-neighbor-context.md) | Hex focus view: while editing a hex, see its six directional neighbors' content for thematic continuity |
 
 Each feature doc ends with an **Open Questions** section flagging assumptions made where behavior wasn't yet specified — check these before implementing that feature.

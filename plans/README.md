@@ -22,6 +22,7 @@ names the PRD it implements in its header.
 | [`03-hex-map-grid-placement.md`](./03-hex-map-grid-placement.md) | [`prd/features/03`](../prd/features/03-hex-map-grid-placement.md) | 00, 01, 02 |
 | [`04-hex-edit-form.md`](./04-hex-edit-form.md) | [`prd/features/04`](../prd/features/04-hex-edit-form.md) | 00, 01, 02, 03 |
 | [`05-save-load-persistence.md`](./05-save-load-persistence.md) | [`prd/features/05`](../prd/features/05-save-load-persistence.md) | 00–04 |
+| [`06-neighbor-context.md`](./06-neighbor-context.md) | [`prd/features/06`](../prd/features/06-neighbor-context.md) | 00–05 |
 
 ## Dependency graph
 
@@ -40,6 +41,9 @@ names the PRD it implements in its header.
       └────────────┬─────────────┘
                    ▼
           05 Save / Load
+                   │
+                   ▼
+          06 Neighbor Context (Hex Focus View)
 ```
 
 ## Standing rules for every plan
