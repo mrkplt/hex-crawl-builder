@@ -127,6 +127,18 @@ describe('HexFocusView', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('closing with no edits closes immediately without a prompt', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const { centerId } = seed();
+    render(<HexFocusView hexId={centerId} onClose={onClose} />);
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog', { name: /discard/i })).not.toBeInTheDocument();
+  });
+
   it('discard guard: closing with edits prompts; confirming discards and closes', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

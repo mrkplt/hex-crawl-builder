@@ -92,6 +92,28 @@ describe('HexEditFormBody', () => {
     expect(onFieldChange).toHaveBeenCalledWith(name.id, 'K');
   });
 
+  it('calls onFieldChange as the user types into a long_text (textarea) field', async () => {
+    const user = userEvent.setup();
+    const onFieldChange = vi.fn();
+    const notes = makeField({ label: 'Notes', type: 'long_text', order: 0 });
+    const template = makeTemplate([notes]);
+    const hex = makeHex({ q: 0, r: 0 });
+
+    render(
+      <HexEditFormBody
+        hex={hex}
+        template={template}
+        buffer={{ [notes.id]: '' }}
+        onFieldChange={onFieldChange}
+        onSave={() => {}}
+        onRequestClose={() => {}}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Notes'), 'A');
+    expect(onFieldChange).toHaveBeenCalledWith(notes.id, 'A');
+  });
+
   it('Save and Close call their respective callbacks', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
