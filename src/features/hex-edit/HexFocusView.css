@@ -1,0 +1,56 @@
+.hex-focus__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+  padding: 1rem;
+}
+
+.hex-focus {
+  background: Canvas;
+  color: CanvasText;
+  border-radius: 8px;
+  padding: 1.25rem;
+  width: min(64rem, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: grid;
+  grid-template-columns: minmax(11rem, 1fr) minmax(20rem, 2fr) minmax(11rem, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.hex-focus__column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hex-focus__center {
+  min-width: 0;
+}
+
+/* Below this width the flanking columns can't hold three-across; collapse to
+   a single direction-labeled list beneath the center editor (direction stays
+   an explicit label on each panel rather than implied by position). */
+@media (max-width: 60rem) {
+  .hex-focus {
+    grid-template-columns: 1fr;
+  }
+
+  .hex-focus__center {
+    order: 1;
+  }
+
+  .hex-focus__column--left {
+    order: 2;
+  }
+
+  .hex-focus__column--right {
+    order: 3;
+  }
+}

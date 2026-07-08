@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { TemplateEditor } from '../features/template/TemplateEditor';
 import { HexMap } from '../features/map/HexMap';
-import { HexEditForm } from '../features/hex-edit/HexEditForm';
+import { HexFocusView } from '../features/hex-edit/HexFocusView';
 import { PersistenceBar } from '../features/persistence/PersistenceBar';
 import './App.css';
 
@@ -32,7 +32,7 @@ function App(): React.JSX.Element {
         </section>
       </main>
       {selectedHexId !== null ? (
-        <HexEditForm
+        <HexFocusView
           hexId={selectedHexId}
           onClose={() => {
             setSelectedHexId(null);
