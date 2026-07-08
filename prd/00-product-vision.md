@@ -8,6 +8,14 @@ A React app with two intertwined jobs:
 1. **Define a schema** (checklist template) describing what content every hex should have.
 2. **Place and fill in hexes** on a true hex-grid map, using that schema to drive a per-hex edit form and to flag which hexes are incomplete.
 
+## App shell / screens
+Three surfaces:
+- **Hex map screen** — the primary working surface. Hexes are added (drag from palette), moved, and removed here (see doc 03).
+- **Template editor** — reached via a **"Template" edit button**. Brings up the form/schema builder (doc 01) for defining and reordering fields. Editing the schema here updates every hex's incomplete marker live.
+- **Hex edit window** — opened by **clicking a placed hex** on the map. A window/modal to view and edit that hex's field values (doc 04), driven by the live template.
+
+On first run (no save loaded) everything starts empty; with no fields defined yet, the natural first step is the Template editor. See doc 01 for initial-state detail.
+
 ## What this explicitly is NOT
 - Not a drawing/painting tool. No freehand terrain, no flood fill.
 - Not a hex-flower random-table tool (though visually/mechanically inspired by the author's `hex-flower` repo's drag-and-drop tile handling).
