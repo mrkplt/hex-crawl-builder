@@ -1,0 +1,34 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-shell__header {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.app-shell__header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.app-shell__body {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 1px;
+  flex: 1;
+  min-height: 0;
+  background: rgba(128, 128, 128, 0.3);
+}
+
+.app-shell__panel {
+  padding: 1rem;
+  overflow: auto;
+  background: Canvas;
+}
+
+.app-shell__panel--map {
+  background: Canvas;
+}
