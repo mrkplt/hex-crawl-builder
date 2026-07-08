@@ -1,0 +1,15 @@
+.persistence-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.persistence-bar__file {
+  display: none;
+}
+
+.persistence-bar__error {
+  color: #b00020;
+  font-size: 0.8rem;
+  max-width: 24rem;
+}
