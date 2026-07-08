@@ -145,6 +145,7 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onNodeDragStop={onNodeDragStop}
+          nodeOrigin={[0.5, 0.5]}
           defaultEdgeOptions={{ style: { ...HIDDEN_EDGE_STYLE }, selectable: false }}
           fitView
           proOptions={{ hideAttribution: true }}

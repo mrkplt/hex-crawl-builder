@@ -47,22 +47,35 @@
   cursor: pointer;
 }
 
+.hex-tile__svg {
+  overflow: visible;
+  display: block;
+}
+
 .hex-tile__shape {
   fill: rgba(120, 160, 200, 0.35);
   stroke: rgba(90, 120, 160, 0.9);
   stroke-width: 2;
+  stroke-linejoin: round;
 }
 
 .hex-tile--incomplete .hex-tile__shape {
+  fill: rgba(217, 131, 36, 0.18);
   stroke: #d98324;
   stroke-width: 3;
 }
 
+/* Badge sits inside the hexagon, just below the top vertex (the corners of the
+   tile's bounding box fall outside the hex shape, so a corner badge would
+   float outside it). */
 .hex-tile__marker {
   position: absolute;
-  top: 0.15rem;
-  right: 0.35rem;
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
   font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
   color: #d98324;
   pointer-events: none;
 }
