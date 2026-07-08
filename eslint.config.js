@@ -36,11 +36,13 @@ export default tseslint.config(
       '@typescript-eslint/explicit-module-boundary-types': 'warn',
     },
   },
-  // Test files: relax the module-boundary type requirement.
+  // Test files and test/setup infra: relax rules that only add noise there
+  // (module-boundary types, empty noop callbacks/stubs).
   {
-    files: ['src/**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    files: ['src/**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}', 'src/setupTests.ts'],
     rules: {
       '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-empty-function': 'off',
     },
   },
   // Config files run in Node and are not part of the app tsconfig project.
