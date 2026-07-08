@@ -53,14 +53,14 @@
 }
 
 .hex-tile__shape {
-  fill: rgba(120, 160, 200, 0.35);
-  stroke: rgba(90, 120, 160, 0.9);
+  fill: #cdddec;
+  stroke: #5a78a0;
   stroke-width: 2;
   stroke-linejoin: round;
 }
 
 .hex-tile--incomplete .hex-tile__shape {
-  fill: rgba(217, 131, 36, 0.18);
+  fill: #f6e2c8;
   stroke: #d98324;
   stroke-width: 3;
 }
