@@ -23,7 +23,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
-    "erasableSyntaxOnly": true,
     "noUncheckedSideEffectImports": true
   },
   "include": ["vite.config.ts", "vitest.config.ts"]
