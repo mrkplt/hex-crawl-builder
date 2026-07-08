@@ -69,7 +69,12 @@ export function NeighborPanel({
           setExpanded((previous) => !previous);
         }}
       >
-        <span className="neighbor-panel__direction">{label}</span>
+        <span className="neighbor-panel__toggle-label">
+          <span className="neighbor-panel__disclosure" aria-hidden="true">
+            ▶
+          </span>
+          <span className="neighbor-panel__direction">{label}</span>
+        </span>
         {incomplete ? (
           <span className="neighbor-panel__marker" role="img" aria-label="Incomplete">
             !
