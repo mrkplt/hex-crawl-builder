@@ -12,8 +12,13 @@ The form that opens when you click a placed hex on the map — where the actual 
 - Required fields (per the live template) are visually marked (e.g. asterisk/label styling) but this is informational only — nothing blocks saving or closing the form with required fields still empty. That incompleteness is exactly what drives the map's incomplete marker.
 
 ## Orphaned data
-A hex may hold values for fields no longer in the current template (deleted from the template after being filled in). Per the data model, that data is never deleted — but by default it also won't render in the main form since it has no current field definition to render against.
+A hex may hold values for fields no longer in the current template (deleted from the template after being filled in). Per the data model, that data is never deleted — but it has no current field definition to render against in the main form.
 
-## Open questions
-- **Orphaned field visibility:** should there be a collapsed "legacy fields" section in the edit form showing old data that no longer maps to a template field, so it isn't silently inaccessible? Recommend yes, but not decided.
-- **Save behavior:** should edits save live as you type/blur each field, or only on an explicit Save/Close action? This affects whether "unsaved changes" concepts exist at the form level, separate from the overall file save/load. Recommend live-save into in-memory state (explicit file save/export is a separate, later action per the Persistence doc), but confirm.
+**Decided: surface it read-only.** Below the live-template inputs, the edit form shows a **collapsed "Legacy fields" section** whenever the hex holds one or more `fieldValues` entries whose id is not in the current template. It lists each orphaned entry (its field id and stored value) as **read-only** — visible and copyable, but clearly not a live field and not editable. This keeps deliberately-preserved data from becoming silently inaccessible, without re-promoting it into the schema.
+- The section is omitted entirely when a hex has no orphaned values (the common case), so it adds no clutter for hexes that are fully in sync with the template.
+- Read-only only for v1: no in-form "delete this orphaned value" or "re-adopt into template" action yet (that's the deferred option, see doc 01's audit-view note).
+
+## Save behavior
+**Decided: explicit Save, not live-save.** Edits are held in a form-local buffer while the form is open; they are only committed to the hex's `fieldValues` (in-memory state) when the user explicitly **Saves**. Closing/cancelling without saving discards the buffered edits and leaves the hex unchanged.
+- Because values commit only on Save, a hex's incomplete marker (per doc 02) updates when the form is saved, not keystroke-by-keystroke.
+- If the form is closed with unsaved edits in the buffer, prompt to confirm discarding them (this is a form-local buffer, distinct from the file-level save/export in doc 05 — Saving here writes to memory, not to disk).

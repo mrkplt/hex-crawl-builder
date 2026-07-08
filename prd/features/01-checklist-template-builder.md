@@ -3,6 +3,9 @@
 ## Purpose
 Define the schema of fields that every hex on the map will carry. Acts as validation/display schema, not a hard data constraint.
 
+## Initial state (first run)
+On first run — no save file loaded — everything starts in a **completely new, empty state**: an empty template (no fields yet) and no placed hexes. The hex map screen is the primary surface (see doc 00, App shell), but with no fields defined the natural first step is to open the **Template editor** (via the Template edit button) and define the schema before placing hexes.
+
 ## Field model
 ```
 Field {
@@ -38,4 +41,4 @@ Design the type system as a registry/lookup (e.g. a map of `type -> { render com
 - Default values per field.
 
 ## Open questions
-- Should there be a way to see/manage fields that exist only as "orphaned data" on some hex but no longer exist in the template (e.g. a small "legacy fields" audit view)? Not required for v1, but worth a decision before it becomes invisible clutter.
+- ~~Should there be a way to see/manage orphaned-field data?~~ **Partly decided:** orphaned values are surfaced **read-only per hex** in a collapsed "Legacy fields" section of the Hex Edit Form (see doc 04). A *template-level* audit/management view (list all orphaned field ids across all hexes, bulk delete, or re-adopt into the template) remains deferred — not built for v1, but the read-only per-hex surfacing keeps the data reachable in the meantime.
