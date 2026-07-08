@@ -39,8 +39,16 @@ describe('HexFocusView', () => {
 
     const rightColumn = container.querySelector('.hex-focus__column--right');
     const leftColumn = container.querySelector('.hex-focus__column--left');
-    expect(within(rightColumn as HTMLElement).getAllByText(/^(NE|E|SE)$/)).toHaveLength(3);
-    expect(within(leftColumn as HTMLElement).getAllByText(/^(NW|W|SW)$/)).toHaveLength(3);
+    // NE is populated (visible direction label on its toggle); E and SE are
+    // empty edges (direction conveyed via the create button's accessible name).
+    expect(within(rightColumn as HTMLElement).getByText('NE')).toBeInTheDocument();
+    expect(
+      within(rightColumn as HTMLElement).getByRole('button', { name: 'Create hex to the E' }),
+    ).toBeInTheDocument();
+    expect(
+      within(rightColumn as HTMLElement).getByRole('button', { name: 'Create hex to the SE' }),
+    ).toBeInTheDocument();
+    expect(within(leftColumn as HTMLElement).getAllByRole('button')).toHaveLength(3);
   });
 
   it('shows the NE neighbor collapsed with its live field preview', () => {

@@ -44,7 +44,6 @@ export function NeighborPanel({
         <span className="neighbor-panel__create-icon" aria-hidden="true">
           +
         </span>
-        <span className="neighbor-panel__direction">{label}</span>
       </button>
     );
   }
