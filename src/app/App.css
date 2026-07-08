@@ -5,6 +5,10 @@
 }
 
 .app-shell__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid rgba(128, 128, 128, 0.3);
 }
