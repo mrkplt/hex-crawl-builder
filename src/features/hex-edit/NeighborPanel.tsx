@@ -14,11 +14,12 @@ export interface NeighborPanelProps {
 }
 
 /**
- * One read-only neighbor panel in the hex focus view. An empty edge shows a
- * `+` create affordance; a populated edge shows a collapsed, truncated preview
- * that expands to full live fields plus orphaned legacy values, with an Edit
- * action that re-centers the view. Purely presentational — mutation always
- * flows through the two callbacks, never the store.
+ * One read-only neighbor panel in the hex focus view. An empty edge renders
+ * as a single large `+` create button filling the panel; a populated edge
+ * shows a collapsed, truncated preview that expands to full live fields plus
+ * orphaned legacy values, with an Edit action that re-centers the view.
+ * Purely presentational — mutation always flows through the two callbacks,
+ * never the store.
  */
 export function NeighborPanel({
   direction,
@@ -32,19 +33,19 @@ export function NeighborPanel({
 
   if (neighbor === null) {
     return (
-      <div className="neighbor-panel neighbor-panel--empty">
-        <span className="neighbor-panel__direction">{label}</span>
-        <button
-          type="button"
-          className="neighbor-panel__create"
-          aria-label={`Create hex to the ${label}`}
-          onClick={() => {
-            onCreate(direction);
-          }}
-        >
+      <button
+        type="button"
+        className="neighbor-panel neighbor-panel--empty"
+        aria-label={`Create hex to the ${label}`}
+        onClick={() => {
+          onCreate(direction);
+        }}
+      >
+        <span className="neighbor-panel__create-icon" aria-hidden="true">
           +
-        </button>
-      </div>
+        </span>
+        <span className="neighbor-panel__direction">{label}</span>
+      </button>
     );
   }
 

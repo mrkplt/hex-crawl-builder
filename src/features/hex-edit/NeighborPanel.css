@@ -10,9 +10,34 @@
 
 .neighbor-panel--empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 4.5rem;
   border-style: dashed;
+  border-color: rgba(128, 128, 128, 0.6);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.neighbor-panel--empty:hover,
+.neighbor-panel--empty:focus-visible {
+  background: rgba(42, 170, 119, 0.1);
+  border-color: #2a7;
+}
+
+.neighbor-panel__create-icon {
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1;
+  color: #2a7;
 }
 
 .neighbor-panel__direction {
@@ -20,16 +45,6 @@
   font-weight: 600;
   color: GrayText;
   text-transform: uppercase;
-}
-
-.neighbor-panel__create {
-  border: 1px dashed rgba(128, 128, 128, 0.6);
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  padding: 0.2rem 0.6rem;
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .neighbor-panel__toggle {
