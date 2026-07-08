@@ -51,6 +51,16 @@ export const DIRECTIONS: readonly Direction[] = [
   Direction.NW,
 ];
 
+/** Short display label for a direction slot, shared by any UI naming a neighbor. */
+export const DIRECTION_LABELS: Record<Direction, string> = {
+  [Direction.NE]: 'NE',
+  [Direction.E]: 'E',
+  [Direction.SE]: 'SE',
+  [Direction.SW]: 'SW',
+  [Direction.W]: 'W',
+  [Direction.NW]: 'NW',
+};
+
 /** The reciprocal edge: NE↔SW, E↔W, SE↔NW. */
 export function opposite(dir: number): number {
   return (dir + 3) % 6;
