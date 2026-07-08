@@ -1,9 +1,10 @@
+import { TemplateEditor } from '../features/template/TemplateEditor';
 import './App.css';
 
 /**
- * App shell. Lays out the three product surfaces named in the product vision
- * as placeholder regions; each is filled in by a later plan:
- *  - Template builder  → plan 02
+ * App shell. Lays out the three product surfaces named in the product vision.
+ * Template builder is live (plan 02); the map and hex-edit regions remain
+ * placeholders filled in by later plans:
  *  - Hex map / grid    → plan 03
  *  - Hex edit form     → plan 04
  */
@@ -14,10 +15,9 @@ function App(): React.JSX.Element {
         <h1>Hex Crawl Builder</h1>
       </header>
       <main className="app-shell__body">
-        <section className="app-shell__panel" aria-label="Template builder">
-          <h2>Template</h2>
-          <p>Define the per-hex checklist schema.</p>
-        </section>
+        <div className="app-shell__panel">
+          <TemplateEditor />
+        </div>
         <section className="app-shell__panel app-shell__panel--map" aria-label="Hex map">
           <h2>Map</h2>
           <p>Place and arrange hexes on the grid.</p>
