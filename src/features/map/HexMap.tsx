@@ -187,7 +187,9 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
       setIsDragging(true);
       setDraggingHexId(null);
       event.dataTransfer.setData(PALETTE_MIME, 'new-hex');
-      event.dataTransfer.effectAllowed = 'copy';
+      // Must match onDragOver's dropEffect ('move'); a copy/move mismatch makes
+      // the browser reject the drop and never fire the drop event.
+      event.dataTransfer.effectAllowed = 'move';
       attachDragGhost(event);
     },
     [attachDragGhost],

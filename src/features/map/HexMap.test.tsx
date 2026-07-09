@@ -59,6 +59,38 @@ describe('HexMap', () => {
     expect(screen.getByLabelText(/delete zone/i)).toBeInTheDocument();
   });
 
+  it('palette drag and canvas dragOver use compatible drag effects', () => {
+    // A copy/move mismatch between effectAllowed (set on dragStart) and
+    // dropEffect (set on dragOver) makes real browsers reject the drop and never
+    // fire the drop event — the palette-place regression. Guard the invariant.
+    const { container } = render(<HexMap />);
+    const canvas = container.querySelector('.hex-map__canvas');
+    const dt = {
+      _effectAllowed: 'uninitialized',
+      _dropEffect: 'uninitialized',
+      setData: vi.fn(),
+      getData: (t: string) => (t === 'application/hex-crawl' ? 'new-hex' : ''),
+      setDragImage: vi.fn(),
+      get effectAllowed() {
+        return this._effectAllowed;
+      },
+      set effectAllowed(v: string) {
+        this._effectAllowed = v;
+      },
+      get dropEffect() {
+        return this._dropEffect;
+      },
+      set dropEffect(v: string) {
+        this._dropEffect = v;
+      },
+    };
+    fireEvent.dragStart(screen.getByLabelText(/new hex/i), { dataTransfer: dt });
+    fireEvent.dragOver(canvas!, { dataTransfer: dt });
+    // effectAllowed 'move' is compatible with dropEffect 'move'.
+    expect(dt._effectAllowed).toBe('move');
+    expect(dt._dropEffect).toBe('move');
+  });
+
   it('places a hex when the palette tile is dropped on an empty canvas', () => {
     const { container } = render(<HexMap />);
     const canvas = container.querySelector('.hex-map__canvas');
