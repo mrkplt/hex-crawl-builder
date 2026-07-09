@@ -18,3 +18,15 @@ Then the discrete, implementable features:
 | [`prd/features/06-neighbor-context.md`](./prd/features/06-neighbor-context.md) | Hex focus view: while editing a hex, see its six directional neighbors' content for thematic continuity |
 
 Each feature doc ends with an **Open Questions** section flagging assumptions made where behavior wasn't yet specified — check these before implementing that feature.
+
+## Deployment
+
+The app is served at [mrkplt.com/hex-crawl-builder/](http://mrkplt.com/hex-crawl-builder/) via GitHub Pages.
+
+Deployment is manual. CI runs typecheck, lint, and tests on every push but does not deploy. To publish a new version, run:
+
+```sh
+npm run deploy
+```
+
+This builds the app and pushes the output to the `gh-pages` branch. GitHub Pages serves that branch automatically.
