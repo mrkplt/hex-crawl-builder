@@ -16,8 +16,8 @@ import type { GraphState } from '../../domain/graph';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { HexNode } from './HexNode';
 import { HIDDEN_EDGE_STYLE, buildHexEdges, buildHexNodes, type HexFlowNode } from './nodes';
-import { pixelToAxial } from './geometry';
-import { decidePaletteDrop, resolveDragStop } from './placement';
+import { hexDimensions, hexPolygonPoints, pixelToAxial } from './geometry';
+import { decidePaletteDrop, isOverTrash, resolveDragStop } from './placement';
 import './HexMap.css';
 
 /** Hex circumradius in flow pixels. React Flow's own zoom scales this visually. */
@@ -29,6 +29,31 @@ const nodeTypes = { hex: HexNode };
 export interface HexMapProps {
   /** Fired when a placed hex is clicked. Plan 04 wires this to the edit form. */
   onHexClick?: (hexId: string) => void;
+}
+
+/** Build an off-screen SVG element to use as the drag image for the palette tile. */
+function buildDragImage(size: number): SVGSVGElement {
+  const { width, height } = hexDimensions(size);
+  const pad = 4;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', String(width + pad));
+  svg.setAttribute('height', String(height + pad));
+  svg.setAttribute(
+    'viewBox',
+    `${-(width + pad) / 2} ${-(height + pad) / 2} ${width + pad} ${height + pad}`,
+  );
+  svg.style.position = 'fixed';
+  svg.style.top = '-9999px';
+  svg.style.left = '-9999px';
+  svg.style.pointerEvents = 'none';
+
+  const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  poly.setAttribute('points', hexPolygonPoints(size));
+  poly.setAttribute('fill', '#cdddec');
+  poly.setAttribute('stroke', '#5a78a0');
+  poly.setAttribute('stroke-width', '2');
+  svg.appendChild(poly);
+  return svg;
 }
 
 function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
@@ -52,9 +77,9 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
   const { screenToFlowPosition } = useReactFlow();
   const trashRef = useRef<HTMLDivElement>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragImageRef = useRef<SVGSVGElement | null>(null);
 
-  // Nodes/edges are derived from the store — the graph is the source of truth.
-  // Re-syncing here also snaps rejected drags back to their stored positions.
   const resetFromStore = useCallback(() => {
     setNodes(buildHexNodes(hexes, template, HEX_SIZE, handleHexClick));
     setEdges(buildHexEdges(hexes));
@@ -77,7 +102,16 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
   const onDrop = useCallback(
     (event: React.DragEvent): void => {
       event.preventDefault();
+      setIsDragging(false);
+      if (dragImageRef.current) {
+        dragImageRef.current.remove();
+        dragImageRef.current = null;
+      }
       if (event.dataTransfer.getData(PALETTE_MIME) !== 'new-hex') {
+        return;
+      }
+      // Palette drop on the trash zone is a no-op — nothing is placed or deleted.
+      if (isOverTrash({ x: event.clientX, y: event.clientY }, trashRef.current?.getBoundingClientRect() ?? null)) {
         return;
       }
       const flowPoint = screenToFlowPosition({ x: event.clientX, y: event.clientY });
@@ -90,8 +124,13 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
     [screenToFlowPosition, placeHex],
   );
 
+  const onNodeDragStart: OnNodeDrag<HexFlowNode> = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
   const onNodeDragStop: OnNodeDrag<HexFlowNode> = useCallback(
     (event, node) => {
+      setIsDragging(false);
       const pointerScreen =
         'clientX' in event ? { x: event.clientX, y: event.clientY } : { x: 0, y: 0 };
       const outcome = resolveDragStop({
@@ -105,20 +144,44 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
 
       if (outcome.kind === 'delete') {
         setPendingDelete(outcome.hexId);
-        resetFromStore(); // snap back until the deletion is confirmed
+        resetFromStore();
       } else if (outcome.kind === 'move') {
         moveHex(outcome.hexId, outcome.destination);
       } else {
-        resetFromStore(); // rejected → snap back
+        resetFromStore();
       }
     },
     [moveHex, resetFromStore],
   );
 
   const onPaletteDragStart = useCallback((event: React.DragEvent): void => {
+    setIsDragging(true);
     event.dataTransfer.setData(PALETTE_MIME, 'new-hex');
     event.dataTransfer.effectAllowed = 'copy';
+
+    // Custom hex-shaped drag ghost centered on pointer.
+    const img = buildDragImage(HEX_SIZE);
+    document.body.appendChild(img);
+    dragImageRef.current = img;
+    const { width, height } = hexDimensions(HEX_SIZE);
+    event.dataTransfer.setDragImage(img, (width + 4) / 2, (height + 4) / 2);
   }, []);
+
+  const onPaletteDragEnd = useCallback((): void => {
+    setIsDragging(false);
+    if (dragImageRef.current) {
+      dragImageRef.current.remove();
+      dragImageRef.current = null;
+    }
+  }, []);
+
+  const trashClass = isDragging
+    ? 'hex-map__trash hex-map__trash--active'
+    : 'hex-map__trash';
+
+  // Palette tile SVG dimensions
+  const { width: pWidth, height: pHeight } = hexDimensions(HEX_SIZE);
+  const pPad = 8;
 
   return (
     <section className="hex-map" aria-label="Hex map">
@@ -126,14 +189,23 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
         <div
           className="hex-map__palette-tile"
           draggable
-          role="button"
-          tabIndex={0}
           aria-label="New hex — drag onto the map"
           onDragStart={onPaletteDragStart}
+          onDragEnd={onPaletteDragEnd}
         >
-          + New hex
+          <svg
+            className="hex-map__palette-svg"
+            width={pWidth + pPad}
+            height={pHeight + pPad}
+            viewBox={`${-(pWidth + pPad) / 2} ${-(pHeight + pPad) / 2} ${pWidth + pPad} ${pHeight + pPad}`}
+            aria-hidden="true"
+            focusable="false"
+          >
+            <polygon points={hexPolygonPoints(HEX_SIZE)} className="hex-tile__shape" />
+          </svg>
+          <span className="hex-map__palette-label">New hex</span>
         </div>
-        <div ref={trashRef} className="hex-map__trash" aria-label="Delete zone">
+        <div ref={trashRef} className={trashClass} aria-label="Delete zone">
           🗑 Trash
         </div>
       </div>
@@ -144,8 +216,10 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
+          onNodeDragStart={onNodeDragStart}
           onNodeDragStop={onNodeDragStop}
           nodeOrigin={[0.5, 0.5]}
+          panOnDrag={!isDragging}
           defaultEdgeOptions={{ style: { ...HIDDEN_EDGE_STYLE }, selectable: false }}
           fitView
           proOptions={{ hideAttribution: true }}
