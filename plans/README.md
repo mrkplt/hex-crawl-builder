@@ -78,8 +78,8 @@ engineering conventions.
 - **Typecheck + lint must pass before every commit, and the full test suite +
   coverage before every push.** Enforced locally by git hooks (plan 00) and in
   CI.
-- **Definition of Done for each plan:** all tasks complete; `npm run typecheck`,
-  `npm run lint`, and `npm run test:coverage` all pass; the feature's PRD
+- **Definition of Done for each plan:** all tasks complete; `yarn typecheck`,
+  `yarn lint`, and `yarn test:coverage` all pass; the feature's PRD
   "Open Questions" resolutions are honored; work is committed and pushed.
 
 ## How to work a plan
@@ -88,5 +88,5 @@ engineering conventions.
    Questions** — those record decisions you must honor).
 2. Implement the tasks in order; keep commits small and scoped to a task.
 3. Write tests alongside the code, not after — each task lists what to cover.
-4. Run `npm run verify` (typecheck + lint + coverage) before committing.
+4. Run `yarn verify` (typecheck + lint + coverage) before committing.
 5. Check the plan's **Acceptance criteria** before considering it done.

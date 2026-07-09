@@ -31,16 +31,18 @@ through a single JSON file.
 
 ## Commands
 
+This project uses **Yarn Classic (1.x)**. Install deps with `yarn install`.
+
 | Command | Does |
 |---|---|
-| `npm run dev` | Start the Vite dev server |
-| `npm run build` | Type-check + production build |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` | ESLint over the repo |
-| `npm run format` | Prettier write |
-| `npm run test` | Vitest (watch) |
-| `npm run test:coverage` | Vitest run with coverage (fails under threshold) |
-| `npm run verify` | `typecheck && lint && test:coverage` — run before committing |
+| `yarn dev` | Start the Vite dev server |
+| `yarn build` | Type-check + production build |
+| `yarn typecheck` | `tsc --noEmit` |
+| `yarn lint` | ESLint over the repo |
+| `yarn format` | Prettier write |
+| `yarn test` | Vitest (watch) |
+| `yarn test:coverage` | Vitest run with coverage (fails under threshold) |
+| `yarn verify` | `typecheck && lint && test:coverage` — run before committing |
 
 ## Non-negotiable engineering rules
 

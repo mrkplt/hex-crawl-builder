@@ -26,7 +26,7 @@ The app is served at [mrkplt.com/hex-crawl-builder/](http://mrkplt.com/hex-crawl
 Deployment is manual. CI runs typecheck, lint, and tests on every push but does not deploy. To publish a new version, run:
 
 ```sh
-npm run deploy
+yarn deploy
 ```
 
 This builds the app and pushes the output to the `gh-pages` branch. GitHub Pages serves that branch automatically.
