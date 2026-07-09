@@ -72,8 +72,11 @@ describe('HexMap', () => {
     render(<HexMap />);
     const dataTransfer = paletteDataTransfer();
     fireEvent.dragStart(screen.getByLabelText(/new hex/i), { dataTransfer });
-    expect(dataTransfer.setDragImage).toHaveBeenCalledTimes(1);
-    const [el] = (dataTransfer.setDragImage as ReturnType<typeof vi.fn>).mock.calls[0] as [Element];
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const setDragImageMock = vi.mocked(dataTransfer.setDragImage);
+    expect(setDragImageMock).toHaveBeenCalledTimes(1);
+    const firstCall = setDragImageMock.mock.calls[0] as unknown as [Element, number, number];
+    const el = firstCall[0];
     expect(el.tagName.toLowerCase()).toBe('svg');
   });
 

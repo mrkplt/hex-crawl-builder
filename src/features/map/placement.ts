@@ -1,5 +1,7 @@
 import type { AxialCoord } from '../../domain/types';
 import { isOccupied, type GraphState } from '../../domain/graph';
+import { DIRECTION_VECTORS } from '../../domain/directions';
+import type { CoordinateIndex } from '../../domain/coordinates';
 import { pixelToAxial, type Pixel } from './geometry';
 
 /**
@@ -9,12 +11,40 @@ import { pixelToAxial, type Pixel } from './geometry';
  * destination).
  */
 
+/**
+ * Returns true if `target` is adjacent to at least one occupied cell in
+ * `index`, excluding the hex identified by `excludeId` from occupancy.
+ * Used for contiguity checks: for moves, the moving hex doesn't count as its
+ * own neighbour.
+ */
+export function isAdjacentToAny(
+  target: AxialCoord,
+  index: CoordinateIndex,
+  excludeId?: string,
+): boolean {
+  for (const delta of DIRECTION_VECTORS) {
+    const neighbor = { q: target.q + delta.q, r: target.r + delta.r };
+    const occupantId = index.get(neighbor);
+    if (occupantId !== undefined && occupantId !== excludeId) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export type PlacementDecision =
   { readonly kind: 'place'; readonly coordinate: AxialCoord } | { readonly kind: 'rejected' };
 
 /** Decide whether a palette drop at `coordinate` should place a hex. */
 export function decidePaletteDrop(state: GraphState, coordinate: AxialCoord): PlacementDecision {
   if (isOccupied(state, coordinate)) {
+    return { kind: 'rejected' };
+  }
+  // First-hex exception: an empty map accepts any cell.
+  if (state.index.size === 0) {
+    return { kind: 'place', coordinate };
+  }
+  if (!isAdjacentToAny(coordinate, state.index)) {
     return { kind: 'rejected' };
   }
   return { kind: 'place', coordinate };
@@ -26,7 +56,8 @@ export type MoveDecision =
 
 /**
  * Decide whether `hexId` may move to `destination`. Rejected when the target is
- * occupied by another hex, or when it is the hex's own current cell (a no-op).
+ * occupied by another hex, or when it is the hex's own current cell (a no-op),
+ * or when the destination would not be adjacent to any other hex (contiguity).
  */
 export function decideMove(
   state: GraphState,
@@ -38,6 +69,15 @@ export function decideMove(
     return { kind: 'rejected' };
   }
   if (occupantId === hexId) {
+    return { kind: 'rejected' };
+  }
+  // Lone-hex exception: if this is the only hex, it can move freely.
+  if (state.index.size === 1) {
+    return { kind: 'move', hexId, destination };
+  }
+  // Contiguity: destination must be adjacent to at least one hex that is not
+  // the hex being moved (it is vacating its current cell).
+  if (!isAdjacentToAny(destination, state.index, hexId)) {
     return { kind: 'rejected' };
   }
   return { kind: 'move', hexId, destination };
@@ -81,8 +121,9 @@ export interface DragStopInput {
 
 /**
  * Resolve what a node-drag release means: drop on trash → delete (pending
- * confirmation), otherwise a move to the snapped destination if empty, else
- * rejected (snap back). Pure, so every branch is testable without a real drag.
+ * confirmation), otherwise a move to the snapped destination if empty and
+ * contiguous, else rejected (snap back). Pure, so every branch is testable
+ * without a real drag.
  */
 export function resolveDragStop(input: DragStopInput): DragStopOutcome {
   if (isOverTrash(input.pointerScreen, input.trashRect)) {

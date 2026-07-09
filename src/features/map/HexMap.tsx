@@ -18,6 +18,7 @@ import { HexNode } from './HexNode';
 import { HIDDEN_EDGE_STYLE, buildHexEdges, buildHexNodes, type HexFlowNode } from './nodes';
 import { hexDimensions, hexPolygonPoints, pixelToAxial } from './geometry';
 import { decidePaletteDrop, isOverTrash, resolveDragStop } from './placement';
+import { isOccupied } from '../../domain/graph';
 import './HexMap.css';
 
 /** Hex circumradius in flow pixels. React Flow's own zoom scales this visually. */
@@ -78,6 +79,8 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
   const trashRef = useRef<HTMLDivElement>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState<'not-adjacent' | 'occupied' | null>(null);
+  const rejectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragImageRef = useRef<SVGSVGElement | null>(null);
 
   const resetFromStore = useCallback(() => {
@@ -93,6 +96,20 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
     hexes: useAppStore.getState().hexes,
     index: useAppStore.getState().index,
   });
+
+  const flashRejection = useCallback(
+    (reason: 'not-adjacent' | 'occupied'): void => {
+      if (rejectionTimerRef.current !== null) {
+        clearTimeout(rejectionTimerRef.current);
+      }
+      setRejectionReason(reason);
+      rejectionTimerRef.current = setTimeout(() => {
+        setRejectionReason(null);
+        rejectionTimerRef.current = null;
+      }, 800);
+    },
+    [],
+  );
 
   const onDragOver = useCallback((event: React.DragEvent): void => {
     event.preventDefault();
@@ -116,12 +133,20 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
       }
       const flowPoint = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const coordinate = pixelToAxial(flowPoint, HEX_SIZE);
-      const decision = decidePaletteDrop(currentGraphState(), coordinate);
+      const state = currentGraphState();
+      const decision = decidePaletteDrop(state, coordinate);
       if (decision.kind === 'place') {
         placeHex(decision.coordinate);
+      } else {
+        // Distinguish rejection reason for visual feedback.
+        if (isOccupied(state, coordinate)) {
+          flashRejection('occupied');
+        } else {
+          flashRejection('not-adjacent');
+        }
       }
     },
-    [screenToFlowPosition, placeHex],
+    [screenToFlowPosition, placeHex, flashRejection],
   );
 
   const onNodeDragStart: OnNodeDrag<HexFlowNode> = useCallback(() => {
@@ -133,12 +158,13 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
       setIsDragging(false);
       const pointerScreen =
         'clientX' in event ? { x: event.clientX, y: event.clientY } : { x: 0, y: 0 };
+      const state = currentGraphState();
       const outcome = resolveDragStop({
         hexId: node.id,
         pointerScreen,
         nodePixel: node.position,
         trashRect: trashRef.current?.getBoundingClientRect() ?? null,
-        state: currentGraphState(),
+        state,
         size: HEX_SIZE,
       });
 
@@ -149,9 +175,17 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
         moveHex(outcome.hexId, outcome.destination);
       } else {
         resetFromStore();
+        // Determine why the move was rejected for feedback.
+        const destination = pixelToAxial(node.position, HEX_SIZE);
+        const occupantId = state.index.get(destination);
+        if (occupantId !== undefined && occupantId !== node.id) {
+          flashRejection('occupied');
+        } else {
+          flashRejection('not-adjacent');
+        }
       }
     },
-    [moveHex, resetFromStore],
+    [moveHex, resetFromStore, flashRejection],
   );
 
   const onPaletteDragStart = useCallback((event: React.DragEvent): void => {
@@ -210,7 +244,15 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
         </div>
       </div>
 
-      <div className="hex-map__canvas" onDrop={onDrop} onDragOver={onDragOver}>
+      <div
+        className={
+          rejectionReason !== null
+            ? `hex-map__canvas hex-map__canvas--rejected-${rejectionReason}`
+            : 'hex-map__canvas'
+        }
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}

@@ -59,6 +59,16 @@
   position: relative;
 }
 
+.hex-map__canvas--rejected-not-adjacent {
+  outline: 2px solid rgba(176, 0, 32, 0.5);
+  outline-offset: -2px;
+}
+
+.hex-map__canvas--rejected-occupied {
+  outline: 2px solid rgba(200, 100, 0, 0.5);
+  outline-offset: -2px;
+}
+
 .hex-tile {
   position: relative;
   display: inline-flex;
