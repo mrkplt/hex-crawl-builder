@@ -170,6 +170,7 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
 
       if (outcome.kind === 'delete') {
         setPendingDelete(outcome.hexId);
+        resetFromStore();
       } else if (outcome.kind === 'move') {
         moveHex(outcome.hexId, outcome.destination);
       } else {
@@ -256,7 +257,7 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
+          onNodesChange={pendingDelete !== null ? () => { /* locked during confirm dialog */ } : onNodesChange}
           onNodeDragStart={onNodeDragStart}
           onNodeDragStop={onNodeDragStop}
           nodeOrigin={[0.5, 0.5]}
@@ -282,7 +283,6 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
           }}
           onCancel={() => {
             setPendingDelete(null);
-            resetFromStore();
           }}
         />
       ) : null}
