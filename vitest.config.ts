@@ -1,11 +1,17 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
+
+const { version } = JSON.parse(readFileSync('./package.json', 'utf-8')) as { version: string };
 
 // Vitest configuration. Kept separate from vite.config.ts (the build config)
 // so the test toolchain is self-describing. Vitest 4 always reports every file
 // matched by `coverage.include`, so untested source counts against thresholds.
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   test: {
     environment: 'jsdom',
     globals: true,

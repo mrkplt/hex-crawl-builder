@@ -101,6 +101,13 @@
 /* Badge sits inside the hexagon, just below the top vertex (the corners of the
    tile's bounding box fall outside the hex shape, so a corner badge would
    float outside it). */
+.hex-map__version {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: GrayText;
+  user-select: none;
+}
+
 .hex-tile__marker {
   position: absolute;
   top: 16%;

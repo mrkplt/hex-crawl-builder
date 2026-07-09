@@ -242,6 +242,7 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
         <div ref={trashRef} className={trashClass} aria-label="Delete zone">
           🗑 Trash
         </div>
+        <span className="hex-map__version">v{__APP_VERSION__}</span>
       </div>
 
       <div
