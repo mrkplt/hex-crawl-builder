@@ -1,36 +1,30 @@
 import { useState } from 'react';
-import { TemplateEditor } from '../features/template/TemplateEditor';
 import { HexMap } from '../features/map/HexMap';
 import { HexFocusView } from '../features/hex-edit/HexFocusView';
 import { PersistenceBar } from '../features/persistence/PersistenceBar';
+import { TemplateEditorModal } from '../features/template/TemplateEditorModal';
 import './App.css';
 
-/**
- * App shell. Lays out the three product surfaces named in the product vision:
- * the template builder (plan 02), the hex map (plan 03), and the hex edit form
- * (plan 04), which opens as a modal when a placed hex is clicked.
- */
 function App(): React.JSX.Element {
   const [selectedHexId, setSelectedHexId] = useState<string | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
 
   return (
     <div className="app-shell">
       <header className="app-shell__header">
         <h1>Hex Crawl Builder</h1>
+        <button type="button" onClick={() => { setTemplateOpen(true); }}>
+          Template
+        </button>
         <PersistenceBar />
       </header>
       <main className="app-shell__body">
-        <div className="app-shell__panel">
-          <TemplateEditor />
-        </div>
-        <div className="app-shell__panel app-shell__panel--map">
-          <HexMap onHexClick={setSelectedHexId} />
-        </div>
-        <section className="app-shell__panel" aria-label="Hex edit form">
-          <h2>Hex</h2>
-          <p>Click a hex on the map to edit its fields.</p>
-        </section>
+        <HexMap onHexClick={setSelectedHexId} />
       </main>
+      <TemplateEditorModal
+        isOpen={templateOpen}
+        onClose={() => { setTemplateOpen(false); }}
+      />
       {selectedHexId !== null ? (
         <HexFocusView
           hexId={selectedHexId}
