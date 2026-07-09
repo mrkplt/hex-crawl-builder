@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { HexMap } from './HexMap';
 import { useAppStore } from '../../state/store';
 import { CoordinateIndex } from '../../domain/coordinates';
@@ -17,6 +18,23 @@ function paletteDataTransfer(): DataTransfer {
     dropEffect: 'none',
     effectAllowed: 'all',
   } as unknown as DataTransfer;
+}
+
+/** A dataTransfer that reports a hex-move drag carrying `hexId`. */
+function hexMoveDataTransfer(hexId: string): DataTransfer {
+  return {
+    getData: (type: string) => (type === 'application/hex-crawl-move' ? hexId : ''),
+    setData: vi.fn(),
+    setDragImage: vi.fn(),
+    dropEffect: 'none',
+    effectAllowed: 'all',
+  } as unknown as DataTransfer;
+}
+
+/** Seed a single hex at the origin and return its id. */
+function seedOneHex(): string {
+  const hex = useAppStore.getState().placeHex({ q: 0, r: 0 });
+  return hex.id;
 }
 
 describe('HexMap', () => {
@@ -104,6 +122,50 @@ describe('HexMap', () => {
     fireEvent.drop(canvas!, { dataTransfer, clientX: 50, clientY: 50 });
 
     expect(Object.keys(useAppStore.getState().hexes)).toHaveLength(0);
+    spy.mockRestore();
+  });
+
+  it('dropping a hex on the trash zone opens the delete confirmation', () => {
+    const spy = vi.spyOn(placement, 'isOverTrash').mockReturnValue(true);
+    const id = seedOneHex();
+    const { container } = render(<HexMap />);
+    const canvas = container.querySelector('.hex-map__canvas');
+
+    const dataTransfer = hexMoveDataTransfer(id);
+    fireEvent.drop(canvas!, { dataTransfer, clientX: 50, clientY: 50 });
+
+    expect(screen.getByRole('dialog', { name: /delete hex/i })).toBeInTheDocument();
+    // The hex is NOT yet deleted — deletion waits for confirmation.
+    expect(Object.keys(useAppStore.getState().hexes)).toHaveLength(1);
+    spy.mockRestore();
+  });
+
+  it('confirming the delete of a trashed hex removes it from the store', async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(placement, 'isOverTrash').mockReturnValue(true);
+    const id = seedOneHex();
+    const { container } = render(<HexMap />);
+    const canvas = container.querySelector('.hex-map__canvas');
+
+    fireEvent.drop(canvas!, { dataTransfer: hexMoveDataTransfer(id), clientX: 50, clientY: 50 });
+    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+
+    expect(Object.keys(useAppStore.getState().hexes)).toHaveLength(0);
+    spy.mockRestore();
+  });
+
+  it('cancelling the delete of a trashed hex keeps it in the store', async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(placement, 'isOverTrash').mockReturnValue(true);
+    const id = seedOneHex();
+    const { container } = render(<HexMap />);
+    const canvas = container.querySelector('.hex-map__canvas');
+
+    fireEvent.drop(canvas!, { dataTransfer: hexMoveDataTransfer(id), clientX: 50, clientY: 50 });
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(screen.queryByRole('dialog', { name: /delete hex/i })).not.toBeInTheDocument();
+    expect(Object.keys(useAppStore.getState().hexes)).toHaveLength(1);
     spy.mockRestore();
   });
 });

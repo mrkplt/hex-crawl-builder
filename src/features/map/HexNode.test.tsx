@@ -22,6 +22,9 @@ describe('HexNode', () => {
           size: 40,
           incomplete: true,
           onHexClick,
+          onHexDragStart: vi.fn(),
+          onHexDragEnd: vi.fn(),
+          dragging: false,
         })}
       />,
     );

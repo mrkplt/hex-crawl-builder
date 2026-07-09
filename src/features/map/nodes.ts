@@ -11,6 +11,12 @@ export interface HexNodeData extends Record<string, unknown> {
   size: number;
   incomplete: boolean;
   onHexClick: (hexId: string) => void;
+  /** Begin an HTML5 drag of this hex (sets ghost + drag payload). */
+  onHexDragStart: (hexId: string, event: React.DragEvent) => void;
+  /** End the HTML5 drag (clears dragging visuals). */
+  onHexDragEnd: () => void;
+  /** Whether this hex is currently the drag source (drives ghost opacity). */
+  dragging: boolean;
 }
 
 export type HexFlowNode = Node<HexNodeData, 'hex'>;
@@ -22,24 +28,42 @@ export type HexFlowNode = Node<HexNodeData, 'hex'>;
  */
 export const HIDDEN_EDGE_STYLE = { stroke: 'transparent', strokeWidth: 0 } as const;
 
-/** Build a single positioned React Flow node with live completeness. */
+/** Callbacks and drag state threaded into every hex node. */
+export interface HexNodeCallbacks {
+  onHexClick: (hexId: string) => void;
+  onHexDragStart: (hexId: string, event: React.DragEvent) => void;
+  onHexDragEnd: () => void;
+  /** The hex id currently being dragged, if any (drives ghost opacity). */
+  draggingId: string | null;
+}
+
+/**
+ * Build a single positioned React Flow node. `draggable: false` because we do
+ * NOT use React Flow's native node drag — a hex is dragged via the HTML5 drag
+ * API (hex-flower model: the source hex dims, a ghost follows the pointer, and
+ * the node's own position never moves). Position is always derived from the
+ * store, so displacement is structurally impossible.
+ */
 export function buildHexNode(
   hex: Hex,
   template: Template,
   size: number,
-  onHexClick: (hexId: string) => void,
+  callbacks: HexNodeCallbacks,
 ): HexFlowNode {
   return {
     id: hex.id,
     type: 'hex',
     position: axialToPixel(hex.coordinate, size),
-    dragging: false,
+    draggable: false,
     data: {
       hexId: hex.id,
       label: `Hex at ${coordKey(hex.coordinate)}`,
       size,
       incomplete: isIncomplete(hex, template),
-      onHexClick,
+      onHexClick: callbacks.onHexClick,
+      onHexDragStart: callbacks.onHexDragStart,
+      onHexDragEnd: callbacks.onHexDragEnd,
+      dragging: callbacks.draggingId === hex.id,
     },
   };
 }
@@ -49,9 +73,9 @@ export function buildHexNodes(
   hexes: Hex[],
   template: Template,
   size: number,
-  onHexClick: (hexId: string) => void,
+  callbacks: HexNodeCallbacks,
 ): HexFlowNode[] {
-  return hexes.map((hex) => buildHexNode(hex, template, size, onHexClick));
+  return hexes.map((hex) => buildHexNode(hex, template, size, callbacks));
 }
 
 /**

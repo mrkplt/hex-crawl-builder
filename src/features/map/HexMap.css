@@ -80,6 +80,20 @@
   cursor: pointer;
 }
 
+.hex-tile[draggable='true'] {
+  cursor: grab;
+}
+
+.hex-tile[draggable='true']:active {
+  cursor: grabbing;
+}
+
+/* The drag source dims to ~50% while a ghost follows the pointer (hex-flower
+   model). The node itself never moves — position is store-derived. */
+.hex-tile--dragging {
+  opacity: 0.5;
+}
+
 .hex-tile__svg {
   overflow: visible;
   display: block;

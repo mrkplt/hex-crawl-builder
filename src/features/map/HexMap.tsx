@@ -8,7 +8,6 @@ import {
   useNodesState,
   useReactFlow,
   type Edge,
-  type OnNodeDrag,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../state/store';
@@ -18,13 +17,15 @@ import { HexNode } from './HexNode';
 import { HIDDEN_EDGE_STYLE, buildHexEdges, buildHexNodes, type HexFlowNode } from './nodes';
 import { hexDimensions, hexPolygonPoints, pixelToAxial } from './geometry';
 import { decidePaletteDrop, isOverTrash, resolveDragStop } from './placement';
-import { reconcileDragStop } from './dragReconcile';
 import { isOccupied } from '../../domain/graph';
 import './HexMap.css';
 
 /** Hex circumradius in flow pixels. React Flow's own zoom scales this visually. */
 const HEX_SIZE = 40;
+/** MIME payload marking a drag that originates from the palette "New hex" tile. */
 const PALETTE_MIME = 'application/hex-crawl';
+/** MIME payload carrying the id of an existing hex being dragged (move/delete). */
+const HEX_MIME = 'application/hex-crawl-move';
 
 const nodeTypes = { hex: HexNode };
 
@@ -80,42 +81,33 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
   const trashRef = useRef<HTMLDivElement>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // The id of the hex currently being dragged (null when dragging the palette
+  // tile or nothing). Drives the source hex's dimmed ghost styling.
+  const [draggingHexId, setDraggingHexId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<'not-adjacent' | 'occupied' | null>(null);
   const rejectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragImageRef = useRef<SVGSVGElement | null>(null);
-
-  const resetFromStore = useCallback(() => {
-    setNodes(buildHexNodes(hexes, template, HEX_SIZE, handleHexClick));
-    setEdges(buildHexEdges(hexes));
-  }, [hexes, template, handleHexClick, setNodes, setEdges]);
-
-  /**
-   * Snap a single node back to its store-derived home position after a drag
-   * that produced no committed move (delete-pending or rejected). Delegates to
-   * the pure `reconcileDragStop`, which rebuilds the affected node with a fresh
-   * identity so React Flow drops its internal drag-measured position. The
-   * hex-flower principle: a dragged element's position is always derived from
-   * the data model, never from where the drag left it.
-   */
-  const snapNodeToStore = useCallback(
-    (hexId: string): void => {
-      const state: GraphState = {
-        hexes: useAppStore.getState().hexes,
-        index: useAppStore.getState().index,
-      };
-      setNodes((prev) => reconcileDragStop(prev, hexId, state, HEX_SIZE, handleHexClick, template));
-    },
-    [setNodes, handleHexClick, template],
-  );
-
-  useEffect(() => {
-    resetFromStore();
-  }, [resetFromStore]);
 
   const currentGraphState = (): GraphState => ({
     hexes: useAppStore.getState().hexes,
     index: useAppStore.getState().index,
   });
+
+  const clearDragImage = useCallback((): void => {
+    if (dragImageRef.current) {
+      dragImageRef.current.remove();
+      dragImageRef.current = null;
+    }
+  }, []);
+
+  /** Attach a hex-shaped ghost image to the drag, centered under the pointer. */
+  const attachDragGhost = useCallback((event: React.DragEvent): void => {
+    const img = buildDragImage(HEX_SIZE);
+    document.body.appendChild(img);
+    dragImageRef.current = img;
+    const { width, height } = hexDimensions(HEX_SIZE);
+    event.dataTransfer.setDragImage(img, (width + 4) / 2, (height + 4) / 2);
+  }, []);
 
   const flashRejection = useCallback(
     (reason: 'not-adjacent' | 'occupied'): void => {
@@ -131,24 +123,90 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
     [],
   );
 
-  const onDragOver = useCallback((event: React.DragEvent): void => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
-  }, []);
+  // ── Hex drag (move / delete via the HTML5 drag API) ──────────────────────────
+  // React Flow's native node drag is disabled; a hex is dragged like the palette
+  // tile. The source hex dims and a ghost follows the pointer; the node never
+  // moves, so a cancelled/rejected drag leaves it exactly in place.
+  const onHexDragStart = useCallback(
+    (hexId: string, event: React.DragEvent): void => {
+      setIsDragging(true);
+      setDraggingHexId(hexId);
+      event.dataTransfer.setData(HEX_MIME, hexId);
+      event.dataTransfer.effectAllowed = 'move';
+      attachDragGhost(event);
+    },
+    [attachDragGhost],
+  );
 
-  const onDrop = useCallback(
-    (event: React.DragEvent): void => {
-      event.preventDefault();
-      setIsDragging(false);
-      if (dragImageRef.current) {
-        dragImageRef.current.remove();
-        dragImageRef.current = null;
-      }
-      if (event.dataTransfer.getData(PALETTE_MIME) !== 'new-hex') {
+  const onHexDragEnd = useCallback((): void => {
+    setIsDragging(false);
+    setDraggingHexId(null);
+    clearDragImage();
+  }, [clearDragImage]);
+
+  const handleHexDrop = useCallback(
+    (hexId: string, event: React.DragEvent): void => {
+      const pointerScreen = { x: event.clientX, y: event.clientY };
+      // Trash hit-test first — it needs only screen coords, so a drop on the
+      // trash resolves to delete without depending on the flow-space transform.
+      if (isOverTrash(pointerScreen, trashRef.current?.getBoundingClientRect() ?? null)) {
+        setPendingDelete(hexId);
         return;
       }
-      // Palette drop on the trash zone is a no-op — nothing is placed or deleted.
-      if (isOverTrash({ x: event.clientX, y: event.clientY }, trashRef.current?.getBoundingClientRect() ?? null)) {
+      const state = currentGraphState();
+      const flowPoint = screenToFlowPosition(pointerScreen);
+      const outcome = resolveDragStop({
+        hexId,
+        pointerScreen,
+        nodePixel: flowPoint,
+        trashRect: trashRef.current?.getBoundingClientRect() ?? null,
+        state,
+        size: HEX_SIZE,
+      });
+
+      if (outcome.kind === 'delete') {
+        setPendingDelete(outcome.hexId);
+      } else if (outcome.kind === 'move') {
+        moveHex(outcome.hexId, outcome.destination);
+      } else {
+        const destination = pixelToAxial(flowPoint, HEX_SIZE);
+        const occupantId = state.index.get(destination);
+        if (occupantId !== undefined && occupantId !== hexId) {
+          flashRejection('occupied');
+        } else {
+          flashRejection('not-adjacent');
+        }
+      }
+    },
+    [screenToFlowPosition, moveHex, flashRejection],
+  );
+
+  // ── Palette drag (place a new hex) ───────────────────────────────────────────
+  const onPaletteDragStart = useCallback(
+    (event: React.DragEvent): void => {
+      setIsDragging(true);
+      setDraggingHexId(null);
+      event.dataTransfer.setData(PALETTE_MIME, 'new-hex');
+      event.dataTransfer.effectAllowed = 'copy';
+      attachDragGhost(event);
+    },
+    [attachDragGhost],
+  );
+
+  const onPaletteDragEnd = useCallback((): void => {
+    setIsDragging(false);
+    clearDragImage();
+  }, [clearDragImage]);
+
+  const handlePaletteDrop = useCallback(
+    (event: React.DragEvent): void => {
+      // Palette drop on the trash zone is a no-op — nothing placed or deleted.
+      if (
+        isOverTrash(
+          { x: event.clientX, y: event.clientY },
+          trashRef.current?.getBoundingClientRect() ?? null,
+        )
+      ) {
         return;
       }
       const flowPoint = screenToFlowPosition({ x: event.clientX, y: event.clientY });
@@ -157,81 +215,71 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
       const decision = decidePaletteDrop(state, coordinate);
       if (decision.kind === 'place') {
         placeHex(decision.coordinate);
+      } else if (isOccupied(state, coordinate)) {
+        flashRejection('occupied');
       } else {
-        // Distinguish rejection reason for visual feedback.
-        if (isOccupied(state, coordinate)) {
-          flashRejection('occupied');
-        } else {
-          flashRejection('not-adjacent');
-        }
+        flashRejection('not-adjacent');
       }
     },
     [screenToFlowPosition, placeHex, flashRejection],
   );
 
-  const onNodeDragStart: OnNodeDrag<HexFlowNode> = useCallback(() => {
-    setIsDragging(true);
+  // ── Canvas drop dispatch ─────────────────────────────────────────────────────
+  const onDragOver = useCallback((event: React.DragEvent): void => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const onNodeDragStop: OnNodeDrag<HexFlowNode> = useCallback(
-    (event, node) => {
+  const onDrop = useCallback(
+    (event: React.DragEvent): void => {
+      event.preventDefault();
       setIsDragging(false);
-      const pointerScreen =
-        'clientX' in event ? { x: event.clientX, y: event.clientY } : { x: 0, y: 0 };
-      const state = currentGraphState();
-      const outcome = resolveDragStop({
-        hexId: node.id,
-        pointerScreen,
-        nodePixel: node.position,
-        trashRect: trashRef.current?.getBoundingClientRect() ?? null,
-        state,
-        size: HEX_SIZE,
-      });
+      setDraggingHexId(null);
+      clearDragImage();
 
-      if (outcome.kind === 'delete') {
-        // Snap the hex back to its home cell before opening the confirm dialog.
-        // The delete only happens on confirm; on cancel the hex is already in
-        // the right place (nothing to restore).
-        snapNodeToStore(outcome.hexId);
-        setPendingDelete(outcome.hexId);
-      } else if (outcome.kind === 'move') {
-        moveHex(outcome.hexId, outcome.destination);
-      } else {
-        // Rejected move: snap the hex back to where it came from.
-        snapNodeToStore(node.id);
-        // Determine why the move was rejected for feedback.
-        const destination = pixelToAxial(node.position, HEX_SIZE);
-        const occupantId = state.index.get(destination);
-        if (occupantId !== undefined && occupantId !== node.id) {
-          flashRejection('occupied');
-        } else {
-          flashRejection('not-adjacent');
-        }
+      const movedHexId = event.dataTransfer.getData(HEX_MIME);
+      if (movedHexId !== '') {
+        handleHexDrop(movedHexId, event);
+        return;
+      }
+      if (event.dataTransfer.getData(PALETTE_MIME) === 'new-hex') {
+        handlePaletteDrop(event);
       }
     },
-    [moveHex, snapNodeToStore, flashRejection],
+    [clearDragImage, handleHexDrop, handlePaletteDrop],
   );
 
-  const onPaletteDragStart = useCallback((event: React.DragEvent): void => {
-    setIsDragging(true);
-    event.dataTransfer.setData(PALETTE_MIME, 'new-hex');
-    event.dataTransfer.effectAllowed = 'copy';
+  // Dropping directly on the trash zone (which sits in the toolbar, outside the
+  // canvas drop area) needs its own handler: a hex drop here opens the delete
+  // confirmation; a palette drop here is a no-op.
+  const onTrashDrop = useCallback(
+    (event: React.DragEvent): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragging(false);
+      setDraggingHexId(null);
+      clearDragImage();
+      const movedHexId = event.dataTransfer.getData(HEX_MIME);
+      if (movedHexId !== '') {
+        setPendingDelete(movedHexId);
+      }
+    },
+    [clearDragImage],
+  );
 
-    // Custom hex-shaped drag ghost centered on pointer.
-    const img = buildDragImage(HEX_SIZE);
-    document.body.appendChild(img);
-    dragImageRef.current = img;
-    const { width, height } = hexDimensions(HEX_SIZE);
-    event.dataTransfer.setDragImage(img, (width + 4) / 2, (height + 4) / 2);
-  }, []);
+  const nodeCallbacks = useMemo(
+    () => ({ onHexClick: handleHexClick, onHexDragStart, onHexDragEnd, draggingId: draggingHexId }),
+    [handleHexClick, onHexDragStart, onHexDragEnd, draggingHexId],
+  );
 
-  const onPaletteDragEnd = useCallback((): void => {
-    setIsDragging(false);
-    if (dragImageRef.current) {
-      dragImageRef.current.remove();
-      dragImageRef.current = null;
-    }
-  }, []);
+  const resetFromStore = useCallback(() => {
+    setNodes(buildHexNodes(hexes, template, HEX_SIZE, nodeCallbacks));
+    setEdges(buildHexEdges(hexes));
+  }, [hexes, template, nodeCallbacks, setNodes, setEdges]);
+
+  useEffect(() => {
+    resetFromStore();
+  }, [resetFromStore]);
 
   const trashClass = isDragging
     ? 'hex-map__trash hex-map__trash--active'
@@ -263,7 +311,13 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
           </svg>
           <span className="hex-map__palette-label">New hex</span>
         </div>
-        <div ref={trashRef} className={trashClass} aria-label="Delete zone">
+        <div
+          ref={trashRef}
+          className={trashClass}
+          aria-label="Delete zone"
+          onDragOver={onDragOver}
+          onDrop={onTrashDrop}
+        >
           🗑 Trash
         </div>
         <span className="hex-map__version">v{__APP_VERSION__}</span>
@@ -283,10 +337,8 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
-          onNodeDragStart={onNodeDragStart}
-          onNodeDragStop={onNodeDragStop}
+          nodesDraggable={false}
           nodeOrigin={[0.5, 0.5]}
-          panOnDrag={!isDragging}
           defaultEdgeOptions={{ style: { ...HIDDEN_EDGE_STYLE }, selectable: false }}
           fitView
           proOptions={{ hideAttribution: true }}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HIDDEN_EDGE_STYLE, buildHexEdges, buildHexNodes } from './nodes';
+import { HIDDEN_EDGE_STYLE, buildHexEdges, buildHexNodes, type HexNodeCallbacks } from './nodes';
 import { placeHex, type GraphState } from '../../domain/graph';
 import { CoordinateIndex, neighborCoord } from '../../domain/coordinates';
 import { Direction } from '../../domain/directions';
@@ -8,6 +8,13 @@ import { axialToPixel } from './geometry';
 
 const size = 40;
 
+const cb: HexNodeCallbacks = {
+  onHexClick: () => undefined,
+  onHexDragStart: () => undefined,
+  onHexDragEnd: () => undefined,
+  draggingId: null,
+};
+
 function emptyState(): GraphState {
   return { hexes: {}, index: new CoordinateIndex() };
 }
@@ -15,12 +22,7 @@ function emptyState(): GraphState {
 describe('buildHexNodes', () => {
   it('positions each node from its axial coordinate', () => {
     const { state, hex } = placeHex(emptyState(), { q: 2, r: -1 }, makeTemplate([]));
-    const nodes = buildHexNodes(
-      Object.values(state.hexes),
-      makeTemplate([]),
-      size,
-      () => undefined,
-    );
+    const nodes = buildHexNodes(Object.values(state.hexes), makeTemplate([]), size, cb);
     expect(nodes).toHaveLength(1);
     expect(nodes[0]?.id).toBe(hex.id);
     expect(nodes[0]?.position).toEqual(axialToPixel({ q: 2, r: -1 }, size));
@@ -30,14 +32,14 @@ describe('buildHexNodes', () => {
   it('marks a node incomplete against the live template', () => {
     const { state } = placeHex(emptyState(), { q: 0, r: 0 }, makeTemplate([]));
     const template = makeTemplate([makeField({ id: 'a', required: true })]);
-    const nodes = buildHexNodes(Object.values(state.hexes), template, size, () => undefined);
+    const nodes = buildHexNodes(Object.values(state.hexes), template, size, cb);
     expect(nodes[0]?.data.incomplete).toBe(true);
   });
 
   it('marks a node complete when no required field is empty', () => {
     const { state } = placeHex(emptyState(), { q: 0, r: 0 }, makeTemplate([]));
     const template = makeTemplate([makeField({ id: 'a', required: false })]);
-    const nodes = buildHexNodes(Object.values(state.hexes), template, size, () => undefined);
+    const nodes = buildHexNodes(Object.values(state.hexes), template, size, cb);
     expect(nodes[0]?.data.incomplete).toBe(false);
   });
 });

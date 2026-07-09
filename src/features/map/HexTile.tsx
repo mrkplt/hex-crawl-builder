@@ -5,6 +5,12 @@ export interface HexTileProps {
   incomplete: boolean;
   label: string;
   onClick: () => void;
+  /** Whether this tile is the current drag source (renders at ~50% opacity). */
+  dragging?: boolean;
+  /** Begin an HTML5 drag of this tile. When omitted, the tile is not draggable. */
+  onDragStart?: (event: React.DragEvent) => void;
+  /** End the HTML5 drag. */
+  onDragEnd?: () => void;
 }
 
 /**
@@ -20,11 +26,22 @@ const STROKE_PAD = 8;
  * Framework-only (no store, no React Flow) so it renders and tests in
  * isolation. Clicking it invokes `onClick` (wired to the edit form in plan 04).
  */
-export function HexTile({ size, incomplete, label, onClick }: HexTileProps): React.JSX.Element {
+export function HexTile({
+  size,
+  incomplete,
+  label,
+  onClick,
+  dragging = false,
+  onDragStart,
+  onDragEnd,
+}: HexTileProps): React.JSX.Element {
   const { width, height } = hexDimensions(size);
   const boxWidth = width + STROKE_PAD;
   const boxHeight = height + STROKE_PAD;
-  const className = incomplete ? 'hex-tile hex-tile--incomplete' : 'hex-tile';
+  const classNames = ['hex-tile'];
+  if (incomplete) classNames.push('hex-tile--incomplete');
+  if (dragging) classNames.push('hex-tile--dragging');
+  const className = classNames.join(' ');
 
   return (
     <button
@@ -32,6 +49,9 @@ export function HexTile({ size, incomplete, label, onClick }: HexTileProps): Rea
       className={className}
       aria-label={label}
       onClick={onClick}
+      draggable={onDragStart !== undefined}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       style={{ width: boxWidth, height: boxHeight }}
     >
       <svg
