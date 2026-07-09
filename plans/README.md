@@ -23,6 +23,11 @@ names the PRD it implements in its header.
 | [`04-hex-edit-form.md`](./04-hex-edit-form.md) | [`prd/features/04`](../prd/features/04-hex-edit-form.md) | 00, 01, 02, 03 |
 | [`05-save-load-persistence.md`](./05-save-load-persistence.md) | [`prd/features/05`](../prd/features/05-save-load-persistence.md) | 00–04 |
 | [`06-neighbor-context.md`](./06-neighbor-context.md) | [`prd/features/06`](../prd/features/06-neighbor-context.md) | 00–05 |
+| [`08-template-editor-modal.md`](./08-template-editor-modal.md) | [`prd/features/08`](../prd/features/08-template-editor-modal.md) | 00–06 |
+| [`09-localstorage-autosave.md`](./09-localstorage-autosave.md) | [`prd/features/09`](../prd/features/09-localStorage-autosave.md) | 00–06 |
+| [`10-drag-ux-overhaul.md`](./10-drag-ux-overhaul.md) | [`prd/features/10`](../prd/features/10-drag-ux-overhaul.md) | 00–06 |
+| [`11-hex-contiguity.md`](./11-hex-contiguity.md) | [`prd/features/11`](../prd/features/11-hex-contiguity.md) | 00–06 |
+| [`07-session-start-onboarding.md`](./07-session-start-onboarding.md) | [`prd/features/07`](../prd/features/07-session-start-onboarding.md) | 00–06, 08, 09 |
 
 ## Dependency graph
 
@@ -44,6 +49,17 @@ names the PRD it implements in its header.
                    │
                    ▼
           06 Neighbor Context (Hex Focus View)
+                   │
+          ┌────────┼────────┬──────────┐
+          ▼        ▼        ▼          ▼
+         08       09       10         11
+     Template  autosave  Drag UX  Contiguity
+      Modal               overhaul
+          │        │
+          └────┬───┘
+               ▼
+              07
+          Onboarding
 ```
 
 ## Standing rules for every plan
