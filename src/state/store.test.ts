@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as localStorageModule from '../features/persistence/localStorage';
 import { useAppStore } from './store';
 import { CoordinateIndex, neighborCoord } from '../domain/coordinates';
 import { Direction } from '../domain/directions';
@@ -169,5 +170,60 @@ describe('store — persistence helpers', () => {
     const snapshot = useAppStore.getState().serialize();
     expect(snapshot.template.fields).toHaveLength(1);
     expect(snapshot.hexes.map((h) => h.id)).toContain(hex.id);
+  });
+});
+
+describe('store — autosave subscriber', () => {
+  beforeEach(() => {
+    useAppStore.setState({ template: { fields: [] }, hexes: {}, index: new CoordinateIndex() });
+    localStorage.clear();
+  });
+
+  it('autosaves after addField', () => {
+    const spy = vi.spyOn(localStorageModule, 'saveToLocalStorage');
+    useAppStore.getState().addField({ label: 'X', type: 'short_text', required: false });
+    expect(spy).toHaveBeenCalled();
+    const call = spy.mock.calls[0]?.[0];
+    expect(call?.template.fields).toHaveLength(1);
+    spy.mockRestore();
+  });
+
+  it('autosaves after placeHex', () => {
+    const spy = vi.spyOn(localStorageModule, 'saveToLocalStorage');
+    useAppStore.getState().placeHex({ q: 0, r: 0 });
+    expect(spy).toHaveBeenCalled();
+    const call = spy.mock.calls[0]?.[0];
+    expect(call?.hexes).toHaveLength(1);
+    spy.mockRestore();
+  });
+
+  it('autosaves after deleteHex', () => {
+    const hex = useAppStore.getState().placeHex({ q: 0, r: 0 });
+    const spy = vi.spyOn(localStorageModule, 'saveToLocalStorage');
+    useAppStore.getState().deleteHex(hex.id);
+    expect(spy).toHaveBeenCalled();
+    const call = spy.mock.calls[0]?.[0];
+    expect(call?.hexes).toHaveLength(0);
+    spy.mockRestore();
+  });
+
+  it('autosaves after setHexFieldValues', () => {
+    const hex = useAppStore.getState().placeHex({ q: 0, r: 0 });
+    const spy = vi.spyOn(localStorageModule, 'saveToLocalStorage');
+    useAppStore.getState().setHexFieldValues(hex.id, { 'f-1': 'value' });
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('file load (replaceAll) triggers autosave with the loaded data', () => {
+    const spy = vi.spyOn(localStorageModule, 'saveToLocalStorage');
+    useAppStore.getState().replaceAll({
+      template: { fields: [{ id: 'f', label: 'Name', type: 'short_text', required: false, order: 0 }] },
+      hexes: [],
+    });
+    expect(spy).toHaveBeenCalled();
+    const call = spy.mock.calls[0]?.[0];
+    expect(call?.template.fields).toHaveLength(1);
+    spy.mockRestore();
   });
 });

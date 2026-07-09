@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { saveToLocalStorage } from '../features/persistence/localStorage';
 import type { AxialCoord, Field, FieldType, Hex, Template } from '../domain/types';
 import { CoordinateIndex, buildIndex } from '../domain/coordinates';
 import {
@@ -168,3 +169,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
   },
 }));
+
+useAppStore.subscribe((state) => {
+  saveToLocalStorage(state.serialize());
+});
