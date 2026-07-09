@@ -1,47 +1,37 @@
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
+import * as localStorageModule from '../features/persistence/localStorage';
 import App from './App';
 
-describe('App shell', () => {
-  it('renders the app title', () => {
-    render(<App />);
-    expect(
-      screen.getByRole('heading', { level: 1, name: /hex crawl builder/i }),
-    ).toBeInTheDocument();
+vi.mock('../features/persistence/localStorage', async (importOriginal) => {
+  const actual = await importOriginal<typeof localStorageModule>();
+  return { ...actual };
+});
+
+describe('App router', () => {
+  beforeEach(() => {
+    vi.spyOn(localStorageModule, 'loadFromLocalStorage').mockReturnValue(null);
   });
 
-  it('renders the map surface', () => {
-    render(<App />);
-    expect(screen.getByRole('region', { name: /hex map/i })).toBeInTheDocument();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it('does not render the permanent template side panel', () => {
+  it('shows onboarding when localStorage is empty', async () => {
     render(<App />);
-    expect(screen.queryByRole('region', { name: /template builder/i })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /start mapping/i })).toBeInTheDocument();
+    });
   });
 
-  it('does not render the "click a hex to edit" placeholder', () => {
+  it('shows map when localStorage has saved state', async () => {
+    vi.spyOn(localStorageModule, 'loadFromLocalStorage').mockReturnValue({
+      template: { fields: [] },
+      hexes: [],
+    });
     render(<App />);
-    expect(screen.queryByRole('region', { name: /hex edit form/i })).not.toBeInTheDocument();
-  });
-
-  it('renders a Template button in the header', () => {
-    render(<App />);
-    expect(screen.getByRole('button', { name: /^template$/i })).toBeInTheDocument();
-  });
-
-  it('opens the template editor modal when Template is clicked', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(screen.getByRole('button', { name: /^template$/i }));
-    expect(screen.getByRole('dialog', { name: /template editor/i })).toBeInTheDocument();
-  });
-
-  it('closes the template modal when Done is clicked', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(screen.getByRole('button', { name: /^template$/i }));
-    await user.click(screen.getByRole('button', { name: /done/i }));
-    expect(screen.queryByRole('dialog', { name: /template editor/i })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: /hex map/i })).toBeInTheDocument();
+    });
   });
 });

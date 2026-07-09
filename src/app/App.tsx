@@ -1,40 +1,43 @@
-import { useState } from 'react';
-import { HexMap } from '../features/map/HexMap';
-import { HexFocusView } from '../features/hex-edit/HexFocusView';
-import { PersistenceBar } from '../features/persistence/PersistenceBar';
-import { TemplateEditorModal } from '../features/template/TemplateEditorModal';
+import { useEffect, useState } from 'react';
+import { useAppStore } from '../state/store';
+import { loadFromLocalStorage } from '../features/persistence/localStorage';
+import { OnboardingScreen } from './OnboardingScreen';
+import { MapScreen } from './MapScreen';
 import './App.css';
 
 function App(): React.JSX.Element {
-  const [selectedHexId, setSelectedHexId] = useState<string | null>(null);
-  const [templateOpen, setTemplateOpen] = useState(false);
+  const [screen, setScreen] = useState<'onboarding' | 'map' | null>(null);
+  const replaceAll = useAppStore((state) => state.replaceAll);
 
-  return (
-    <div className="app-shell">
-      <header className="app-shell__header">
-        <h1>Hex Crawl Builder</h1>
-        <button type="button" onClick={() => { setTemplateOpen(true); }}>
-          Template
-        </button>
-        <PersistenceBar />
-      </header>
-      <main className="app-shell__body">
-        <HexMap onHexClick={setSelectedHexId} />
-      </main>
-      <TemplateEditorModal
-        isOpen={templateOpen}
-        onClose={() => { setTemplateOpen(false); }}
+  useEffect(() => {
+    const saved = loadFromLocalStorage();
+    if (saved !== null) {
+      replaceAll(saved);
+      setScreen('map');
+    } else {
+      setScreen('onboarding');
+    }
+  }, [replaceAll]);
+
+  if (screen === 'map') {
+    return (
+      <MapScreen
+        onNewCampaign={() => {
+          setScreen('onboarding');
+        }}
       />
-      {selectedHexId !== null ? (
-        <HexFocusView
-          hexId={selectedHexId}
-          onClose={() => {
-            setSelectedHexId(null);
-          }}
-        />
-      ) : null}
-    </div>
-  );
+    );
+  }
+  if (screen === 'onboarding') {
+    return (
+      <OnboardingScreen
+        onStartMapping={() => {
+          setScreen('map');
+        }}
+      />
+    );
+  }
+  return <></>;
 }
 
 export default App;

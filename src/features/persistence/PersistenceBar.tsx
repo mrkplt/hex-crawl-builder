@@ -6,12 +6,17 @@ import { downloadSaveFile } from './download';
 import { parseSaveFile } from './parse';
 import './PersistenceBar.css';
 
+export interface PersistenceBarProps {
+  /** Called after a file is successfully loaded. Used for post-load navigation. */
+  onLoad?: () => void;
+}
+
 /**
  * Save / Load toolbar. Save serializes the campaign to a downloaded JSON file.
  * Load is gated by a confirmation modal (it replaces all in-memory state),
  * then validates the picked file before applying it via replaceAll.
  */
-export function PersistenceBar(): React.JSX.Element {
+export function PersistenceBar({ onLoad }: PersistenceBarProps = {}): React.JSX.Element {
   const serialize = useAppStore((state) => state.serialize);
   const replaceAll = useAppStore((state) => state.replaceAll);
 
@@ -39,6 +44,7 @@ export function PersistenceBar(): React.JSX.Element {
       if (result.ok) {
         replaceAll({ template: result.value.template, hexes: result.value.hexes });
         setError(null);
+        onLoad?.();
       } else {
         setError(result.error);
       }
