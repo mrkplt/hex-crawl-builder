@@ -18,6 +18,7 @@ import { HexNode } from './HexNode';
 import { HIDDEN_EDGE_STYLE, buildHexEdges, buildHexNodes, type HexFlowNode } from './nodes';
 import { hexDimensions, hexPolygonPoints, pixelToAxial } from './geometry';
 import { decidePaletteDrop, isOverTrash, resolveDragStop } from './placement';
+import { reconcileDragStop } from './dragReconcile';
 import { isOccupied } from '../../domain/graph';
 import './HexMap.css';
 
@@ -87,6 +88,25 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
     setNodes(buildHexNodes(hexes, template, HEX_SIZE, handleHexClick));
     setEdges(buildHexEdges(hexes));
   }, [hexes, template, handleHexClick, setNodes, setEdges]);
+
+  /**
+   * Snap a single node back to its store-derived home position after a drag
+   * that produced no committed move (delete-pending or rejected). Delegates to
+   * the pure `reconcileDragStop`, which rebuilds the affected node with a fresh
+   * identity so React Flow drops its internal drag-measured position. The
+   * hex-flower principle: a dragged element's position is always derived from
+   * the data model, never from where the drag left it.
+   */
+  const snapNodeToStore = useCallback(
+    (hexId: string): void => {
+      const state: GraphState = {
+        hexes: useAppStore.getState().hexes,
+        index: useAppStore.getState().index,
+      };
+      setNodes((prev) => reconcileDragStop(prev, hexId, state, HEX_SIZE, handleHexClick, template));
+    },
+    [setNodes, handleHexClick, template],
+  );
 
   useEffect(() => {
     resetFromStore();
@@ -169,12 +189,16 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
       });
 
       if (outcome.kind === 'delete') {
+        // Snap the hex back to its home cell before opening the confirm dialog.
+        // The delete only happens on confirm; on cancel the hex is already in
+        // the right place (nothing to restore).
+        snapNodeToStore(outcome.hexId);
         setPendingDelete(outcome.hexId);
-        resetFromStore();
       } else if (outcome.kind === 'move') {
         moveHex(outcome.hexId, outcome.destination);
       } else {
-        resetFromStore();
+        // Rejected move: snap the hex back to where it came from.
+        snapNodeToStore(node.id);
         // Determine why the move was rejected for feedback.
         const destination = pixelToAxial(node.position, HEX_SIZE);
         const occupantId = state.index.get(destination);
@@ -185,7 +209,7 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
         }
       }
     },
-    [moveHex, resetFromStore, flashRejection],
+    [moveHex, snapNodeToStore, flashRejection],
   );
 
   const onPaletteDragStart = useCallback((event: React.DragEvent): void => {
@@ -258,7 +282,7 @@ function HexMapInner({ onHexClick }: HexMapProps): React.JSX.Element {
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          onNodesChange={pendingDelete !== null ? () => { /* locked during confirm dialog */ } : onNodesChange}
+          onNodesChange={onNodesChange}
           onNodeDragStart={onNodeDragStart}
           onNodeDragStop={onNodeDragStop}
           nodeOrigin={[0.5, 0.5]}

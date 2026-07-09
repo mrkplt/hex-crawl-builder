@@ -22,17 +22,18 @@ export type HexFlowNode = Node<HexNodeData, 'hex'>;
  */
 export const HIDDEN_EDGE_STYLE = { stroke: 'transparent', strokeWidth: 0 } as const;
 
-/** Map each hex to a positioned React Flow node with live completeness. */
-export function buildHexNodes(
-  hexes: Hex[],
+/** Build a single positioned React Flow node with live completeness. */
+export function buildHexNode(
+  hex: Hex,
   template: Template,
   size: number,
   onHexClick: (hexId: string) => void,
-): HexFlowNode[] {
-  return hexes.map((hex) => ({
+): HexFlowNode {
+  return {
     id: hex.id,
     type: 'hex',
     position: axialToPixel(hex.coordinate, size),
+    dragging: false,
     data: {
       hexId: hex.id,
       label: `Hex at ${coordKey(hex.coordinate)}`,
@@ -40,7 +41,17 @@ export function buildHexNodes(
       incomplete: isIncomplete(hex, template),
       onHexClick,
     },
-  }));
+  };
+}
+
+/** Map each hex to a positioned React Flow node with live completeness. */
+export function buildHexNodes(
+  hexes: Hex[],
+  template: Template,
+  size: number,
+  onHexClick: (hexId: string) => void,
+): HexFlowNode[] {
+  return hexes.map((hex) => buildHexNode(hex, template, size, onHexClick));
 }
 
 /**
